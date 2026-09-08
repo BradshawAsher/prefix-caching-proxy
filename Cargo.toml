@@ -1,0 +1,19 @@
+[package]
+name = "kv-cache-proxy"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Async Runtime & HTTP Server
+tokio = { version = "1", features = ["full"] }
+axum = "0.7"
+reqwest = { version = "0.12", features = ["stream", "json"] }
+# Serialization & JSON
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# Tokenization (HuggingFace Fast Tokenizers)
+tokenizers = "0.20"
+# High-Performance Concurrency Primitives
+parking_lot = "0.12"
+tracing = "0.1"
+tracing-subscriber = "0.3"
