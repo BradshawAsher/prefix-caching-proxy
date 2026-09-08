@@ -40,6 +40,15 @@ This project intercepts OpenAI-compatible `/v1/chat/completions` requests, inspe
 
 ---
 
+## Technical Documentation & References
+
+- **[System Architecture Specification](ARCHITECTURE.md):** Complete end-to-end request lifecycle, memory layout, dynamic branch splitting, and concurrency model.
+- **[Interview Preparation & Defense Guide](interview_prep.md):** In-depth MLSys and systems engineering interview questions, answers, and technical defense.
+- **[Empirical Benchmark Report](benchmarks/RESULTS.md):** Detailed benchmark results comparing naive Round-Robin against prefix-aware routing.
+- **[Implementation Roadmap](PHASES.md):** Chronological implementation log across all 5 engineering phases.
+
+---
+
 ## Core Components
 
 * **In-Memory Compressed Radix Tree (`src/radix.rs`):** Compresses non-branching token sequences into contiguous slices, reducing pointer overhead by ~95% compared to standard Tries. Features automatic branch splitting and thread-safe lock-free reads.
