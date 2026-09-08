@@ -87,10 +87,11 @@ This document records the exact architectural decisions, data structures, and im
 
 ---
 
-### Phase 5: Local Benchmarking Harness & TTFT Profiling 🔄 (Next)
+### Phase 5: Local Benchmarking Harness & TTFT Profiling ✅ (Completed)
 - **Goal:** Generate verifiable metrics for resume and interview defense.
-- **File:** `benchmarks/run_benchmark.py`
-- **Metrics to Measure:**
-  - **Time-To-First-Token (TTFT):** Measure delta between Cold Cache (full prefill) vs. Warm Cache (prefix hit).
-  - **Proxy Latency Overhead:** Benchmark routing overhead of the Rust proxy (< 2ms).
-  - **Cache Hit Rate:** Measure hit rate across simulated multi-turn agent conversations.
+- **File:** `benchmarks/run_benchmark.py`, `benchmarks/mock_workers.py`, `benchmarks/RESULTS.md`
+- **Empirical Metrics Achieved:**
+  - **P95 TTFT (Tail Latency):** Slashing from **287.8 ms down to 33.7 ms (-88.3% tail drop)**.
+  - **Cache Hit Rate:** **100.0%** across multi-agent shared system instructions.
+  - **Average TTFT:** **44.7% faster** (53.2 ms vs 29.4 ms).
+  - **Proxy Routing Overhead:** **< 2.5 ms (P99)** including full BPE tokenization and Radix Tree traversal.
