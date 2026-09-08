@@ -35,17 +35,16 @@ USER_QUESTIONS = [
     "Compare hand-computed cash flow against model assumptions in returns model.",
 ]
 
+
 def send_request(url, payload):
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
-        url,
-        data=data,
-        headers={"Content-Type": "application/json"}
+        url, data=data, headers={"Content-Type": "application/json"}
     )
-    
+
     start_time = time.perf_counter()
     first_token_time = None
-    
+
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             # Read first chunk to measure TTFT (Time-To-First-Token)
@@ -57,64 +56,82 @@ def send_request(url, payload):
     except Exception as e:
         print(f"Request error: {e}")
         return None
-        
+
     ttft_ms = (first_token_time - start_time) * 1000.0 if first_token_time else None
     return ttft_ms
 
+
 def run_benchmark():
-    print("================================================================================")
+    print(
+        "================================================================================"
+    )
     print("  PREFIX-CACHING KV ROUTER: TIME-TO-FIRST-TOKEN (TTFT) BENCHMARK HARNESS")
-    print("================================================================================\n")
-    
+    print(
+        "================================================================================\n"
+    )
+
     # 1. Check if Proxy and Workers are reachable
     try:
         urllib.request.urlopen("http://127.0.0.1:8000/health", timeout=2)
     except Exception:
         print("[-] ERROR: Prefix-Caching Proxy is not running on http://127.0.0.1:8000")
-        print("    Please run the proxy binary or 'cargo run' before launching benchmark.")
+        print(
+            "    Please run the proxy binary or 'cargo run' before launching benchmark."
+        )
         return
 
     # Scenario A: Naive Round-Robin (Simulated: alternating directly between Worker 1 & 2)
-    print(">>> Running Test Suite A: Naive Round-Robin (Cache-Agnostic Load Balancer)...")
+    print(
+        ">>> Running Test Suite A: Naive Round-Robin (Cache-Agnostic Load Balancer)..."
+    )
     rr_latencies = []
-    workers = ["http://127.0.0.1:8001/v1/chat/completions", "http://127.0.0.1:8002/v1/chat/completions"]
-    
+    workers = [
+        "http://127.0.0.1:8001/v1/chat/completions",
+        "http://127.0.0.1:8002/v1/chat/completions",
+    ]
+
     for i, question in enumerate(USER_QUESTIONS):
         target = workers[i % len(workers)]
         payload = {
             "model": "qwen2.5:1.5b",
             "messages": [
                 {"role": "system", "content": SHARED_SYSTEM_PROMPT},
-                {"role": "user", "content": question}
+                {"role": "user", "content": question},
             ],
-            "stream": True
+            "stream": True,
         }
         ttft = send_request(target, payload)
         if ttft:
             rr_latencies.append(ttft)
             status = "WARM HIT" if ttft < 50 else "COLD PREFILL"
-            print(f"  Req {i+1:02d} -> {target.split('/')[-3]} | TTFT: {ttft:6.1f} ms | [{status}]")
+            print(
+                f"  Req {i + 1:02d} -> {target.split('/')[-3]} | TTFT: {ttft:6.1f} ms | [{status}]"
+            )
         time.sleep(0.05)
 
     # Scenario B: Prefix-Caching KV Router
-    print("\n>>> Running Test Suite B: Prefix-Caching KV Router (Rust / Tokio + Radix Tree)...")
+    print(
+        "\n>>> Running Test Suite B: Prefix-Caching KV Router (Rust / Tokio + Radix Tree)..."
+    )
     proxy_url = "http://127.0.0.1:8000/v1/chat/completions"
     router_latencies = []
-    
+
     for i, question in enumerate(USER_QUESTIONS):
         payload = {
             "model": "qwen2.5:1.5b",
             "messages": [
                 {"role": "system", "content": SHARED_SYSTEM_PROMPT},
-                {"role": "user", "content": question}
+                {"role": "user", "content": question},
             ],
-            "stream": True
+            "stream": True,
         }
         ttft = send_request(proxy_url, payload)
         if ttft:
             router_latencies.append(ttft)
             status = "WARM HIT" if ttft < 50 else "COLD PREFILL"
-            print(f"  Req {i+1:02d} -> Proxy:8000 | TTFT: {ttft:6.1f} ms | [{status}]")
+            print(
+                f"  Req {i + 1:02d} -> Proxy:8000 | TTFT: {ttft:6.1f} ms | [{status}]"
+            )
         time.sleep(0.05)
 
     # Summary Statistics
@@ -132,16 +149,34 @@ def run_benchmark():
 
     reduction = ((rr_p50 - rt_p50) / rr_p50) * 100.0
 
-    print("\n================================================================================")
+    print(
+        "\n================================================================================"
+    )
     print("                          FINAL BENCHMARK RESULTS")
-    print("================================================================================")
-    print(f"  Metric                      Naive Round-Robin    Prefix-Caching Router   Delta")
-    print(f"  -------------------------   -----------------    ---------------------   -------")
-    print(f"  Cache Hit Rate (%)          {rr_hit_rate:15.1f}%   {rt_hit_rate:19.1f}%   +{rt_hit_rate - rr_hit_rate:.1f}%")
-    print(f"  P50 TTFT (Median)           {rr_p50:15.1f} ms   {rt_p50:19.1f} ms   -{reduction:.1f}%")
-    print(f"  P95 TTFT (Tail Latency)     {rr_p95:15.1f} ms   {rt_p95:19.1f} ms   -{(rr_p95 - rt_p95)/rr_p95 * 100.0:.1f}%")
-    print(f"  Average TTFT                {rr_avg:15.1f} ms   {rt_avg:19.1f} ms   -{(rr_avg - rt_avg)/rr_avg * 100.0:.1f}%")
-    print("================================================================================\n")
+    print(
+        "================================================================================"
+    )
+    print(
+        f"  Metric                      Naive Round-Robin    Prefix-Caching Router   Delta"
+    )
+    print(
+        f"  -------------------------   -----------------    ---------------------   -------"
+    )
+    print(
+        f"  Cache Hit Rate (%)          {rr_hit_rate:15.1f}%   {rt_hit_rate:19.1f}%   +{rt_hit_rate - rr_hit_rate:.1f}%"
+    )
+    print(
+        f"  P50 TTFT (Median)           {rr_p50:15.1f} ms   {rt_p50:19.1f} ms   -{reduction:.1f}%"
+    )
+    print(
+        f"  P95 TTFT (Tail Latency)     {rr_p95:15.1f} ms   {rt_p95:19.1f} ms   -{(rr_p95 - rt_p95) / rr_p95 * 100.0:.1f}%"
+    )
+    print(
+        f"  Average TTFT                {rr_avg:15.1f} ms   {rt_avg:19.1f} ms   -{(rr_avg - rt_avg) / rr_avg * 100.0:.1f}%"
+    )
+    print(
+        "================================================================================\n"
+    )
 
     # Generate Markdown Results for Artifact & Resume
     report_md = f"""# Empirical Benchmark Report: KV Cache-Affinity Routing
@@ -152,7 +187,7 @@ def run_benchmark():
 | :--- | :--- | :--- | :--- |
 | **Cache Hit Rate (%)** | **{rr_hit_rate:.1f}%** | **{rt_hit_rate:.1f}%** | **+{rt_hit_rate - rr_hit_rate:.1f}% increase** |
 | **P50 TTFT (Median)** | **{rr_p50:.1f} ms** | **{rt_p50:.1f} ms** | **{reduction:.1f}% latency reduction** |
-| **P95 TTFT (Tail Latency)**| **{rr_p95:.1f} ms** | **{rt_p95:.1f} ms** | **-{(rr_p95 - rt_p95)/rr_p95 * 100.0:.1f}% tail drop** |
+| **P95 TTFT (Tail Latency)**| **{rr_p95:.1f} ms** | **{rt_p95:.1f} ms** | **-{(rr_p95 - rt_p95) / rr_p95 * 100.0:.1f}% tail drop** |
 | **Proxy Routing Overhead** | N/A (Direct) | **< 1.8 ms (P99)** | Near-zero CPU overhead |
 
 ### Key Takeaways for Systems Engineering
@@ -162,6 +197,7 @@ def run_benchmark():
     with open("benchmarks/RESULTS.md", "w") as f:
         f.write(report_md)
     print("Saved benchmark report to 'benchmarks/RESULTS.md'.")
+
 
 if __name__ == "__main__":
     run_benchmark()
